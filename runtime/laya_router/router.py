@@ -73,6 +73,9 @@ class RouterCore:
                 "error": "; ".join(errors), "backend": candidates[-1]}
 
     def info(self) -> dict[str, Any]:
+        if not self.config["enabled"]:
+            return {"status": "unavailable", "platform": self.platform["label"], "backend": self.config["backend"],
+                    "advisory": True, "fail_open": True, "error": "Router disabled"}
         try:
             if self._active_backend:
                 return {"status": "ready", "platform": self.platform["label"], **self._get(self._active_backend).info(), "advisory": True}

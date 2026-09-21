@@ -8,7 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from install import data_dir
+from install import data_dir, digest
 
 
 def plan_uninstall(base: Path, agents: list[str] | None = None, runtime: bool = False, all_items: bool = False) -> dict:
@@ -22,8 +22,9 @@ def plan_uninstall(base: Path, agents: list[str] | None = None, runtime: bool = 
     skills = [(Path(path), details) for path, details in manifest.get("skills", {}).items()
               if all_items or runtime or bool(selected.intersection(details.get("agents", [details.get("agent")])))]
     mcp = [(name, details) for name, details in manifest.get("mcp", {}).items() if all_items or runtime or details.get("agent") in selected]
+    launchers = [(Path(path), details) for path, details in manifest.get("launchers", {}).items()] if runtime or all_items else []
     paths = [Path(path) for path in manifest.get("paths", [])] if runtime or all_items else []
-    return {"skills": skills, "mcp": mcp, "paths": paths, "manifest": True, "data": manifest}
+    return {"skills": skills, "mcp": mcp, "launchers": launchers, "paths": paths, "manifest": True, "data": manifest}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -41,7 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     base = data_dir()
     try:
         plan = plan_uninstall(base, agents, args.runtime, args.all)
-        summary = {"skills": [str(p) for p, _ in plan["skills"]], "mcp": [name for name, _ in plan["mcp"]], "paths": [str(p) for p in plan["paths"]]}
+        summary = {"skills": [str(p) for p, _ in plan["skills"]], "mcp": [name for name, _ in plan["mcp"]],
+                   "launchers": [str(p) for p, _ in plan.get("launchers", [])], "paths": [str(p) for p in plan["paths"]]}
         if args.dry_run:
             print(json.dumps(summary, indent=2))
             return 0
@@ -49,13 +51,16 @@ def main(argv: list[str] | None = None) -> int:
             print("No owned installation found")
             return 0
         manifest = plan["data"]
+        for launcher, details in plan.get("launchers", []):
+            if launcher.exists() and digest(launcher.read_bytes()) != details["sha256"]:
+                raise RuntimeError(f"Owned CLI launcher changed; refusing runtime removal: {launcher}")
         for target, details in plan["skills"]:
             owners = set(details.get("agents", [details.get("agent")]))
             remaining = owners - set(agents)
             if remaining and not (args.all or args.runtime):
                 details["agents"] = sorted(remaining)
                 continue
-            if details.get("mode") == "symlink" and target.is_symlink() and str(target.resolve()) == details.get("source"):
+            if details.get("mode") == "symlink" and target.is_symlink() and target.resolve() == Path(details.get("source", "")).resolve():
                 target.unlink()
             elif details.get("mode") == "copy" and target.is_dir() and (target / "SKILL.md").exists():
                 shutil.rmtree(target)
@@ -72,6 +77,13 @@ def main(argv: list[str] | None = None) -> int:
                 if current.returncode == 0 and details.get("command", "") in current.stdout:
                     subprocess.run(["codex", "mcp", "remove", name], check=False, capture_output=True)
                     manifest["mcp"].pop(name, None)
+        for launcher, _ in plan.get("launchers", []):
+            if launcher.exists():
+                launcher.unlink()
+            manifest["launchers"].pop(str(launcher), None)
+            backup = manifest.get("backups", {}).pop(str(launcher), None)
+            if backup and Path(backup).exists():
+                Path(backup).rename(launcher)
         for path in sorted(plan["paths"], key=lambda p: len(p.parts), reverse=True):
             if str(path) not in manifest["paths"] or path.parent != base or path.name not in {".venv", "skill", "config.json"}:
                 continue
@@ -84,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
             if backup and Path(backup).exists():
                 Path(backup).rename(path)
         manifest_path = base / "install-manifest.json"
-        if not manifest["skills"] and not manifest["mcp"] and not manifest["paths"]:
+        if not manifest["skills"] and not manifest["mcp"] and not manifest["paths"] and not manifest.get("launchers"):
             manifest_path.unlink()
             try:
                 base.rmdir()

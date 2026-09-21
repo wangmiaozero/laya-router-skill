@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -70,6 +72,25 @@ def link_or_copy(source: Path, target: Path) -> str:
         return "copy"
 
 
+def launcher_path(base: Path) -> Path | None:
+    if os.name == "nt":
+        return base / "bin" / "laya-router.cmd"
+    user_bin = Path.home() / ".local" / "bin"
+    return user_bin / "laya-router" if user_bin.is_dir() else None
+
+
+def launcher_content(python: Path, windows: bool | None = None) -> str:
+    if windows is None:
+        windows = os.name == "nt"
+    if windows:
+        return f'@echo off\r\n"{python}" -m laya_router %*\r\n'
+    return f'#!/bin/sh\nexec {shlex.quote(str(python))} -m laya_router "$@"\n'
+
+
+def digest(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--agents", default="auto")
@@ -91,7 +112,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("MLX requires macOS Apple Silicon")
     base = data_dir()
     plan = install_plan(agents, base)
-    plan.update({"backend": args.backend, "mcp": not args.no_mcp and "codex" in agents and bool(shutil.which("codex"))})
+    plan.update({"backend": args.backend, "mcp": not args.no_mcp and "codex" in agents and bool(shutil.which("codex")),
+                 "launcher": str(launcher_path(base)) if launcher_path(base) else None})
     if args.dry_run:
         print(json.dumps(plan, indent=2))
         return 0
@@ -103,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         if manifest.get("owner") != "laya-router-skill":
             raise RuntimeError("Existing manifest is not owned by this project")
         manifest_valid = True
+        manifest.setdefault("launchers", {})
         paths = set(manifest["paths"])
         venv_dir = base / ".venv"
         if not venv_dir.exists():
@@ -138,6 +161,33 @@ def main(argv: list[str] | None = None) -> int:
         if not config_path.exists():
             config_path.write_text(json.dumps({"enabled": True, "backend": args.backend, "model": "auto", "language": "auto", "device": "auto", "fallback_on_error": True, "persist_task_text": False, "log_level": "INFO"}, indent=2) + "\n", encoding="utf-8")
             paths.add(str(config_path))
+        launcher = launcher_path(base)
+        launcher_installed = False
+        if launcher:
+            body = launcher_content(python).encode("utf-8")
+            key = str(launcher)
+            if launcher.exists():
+                owned = manifest["launchers"].get(key)
+                current = digest(launcher.read_bytes())
+                if owned and current != owned["sha256"] and not args.force:
+                    raise RuntimeError(f"Owned CLI launcher changed: {launcher}")
+                if not owned and not args.force:
+                    print(f"Skipping existing unowned CLI launcher: {launcher}", file=sys.stderr)
+                else:
+                    if current != digest(body) and not owned:
+                        backup = launcher.with_name(launcher.name + f".backup-{int(time.time())}")
+                        launcher.rename(backup)
+                        manifest.setdefault("backups", {})[key] = str(backup)
+                    launcher.write_bytes(body)
+                    launcher_installed = True
+            else:
+                launcher.parent.mkdir(parents=True, exist_ok=True)
+                launcher.write_bytes(body)
+                launcher_installed = True
+            if launcher_installed:
+                if os.name != "nt":
+                    launcher.chmod(0o755)
+                manifest["launchers"][key] = {"sha256": digest(body), "python": str(python)}
         for agent, target in {a: skill_paths()[a] for a in agents}.items():
             key = str(target)
             if target.exists() or target.is_symlink():
@@ -174,6 +224,16 @@ def main(argv: list[str] | None = None) -> int:
                 print("Existing unowned Codex MCP entry left unchanged", file=sys.stderr)
         manifest["paths"] = sorted(paths)
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        if launcher_installed:
+            print(f"CLI launcher installed: {launcher}")
+        else:
+            print(f"CLI launcher unavailable; use: {python} -m laya_router")
+        on_path = launcher_installed and str(launcher.parent) in os.environ.get("PATH", "").split(os.pathsep)
+        print(f"PATH status: {'READY' if on_path else 'ACTION REQUIRED'}")
+        if not on_path and os.name != "nt":
+            print('Add to your shell PATH manually: export PATH="$HOME/.local/bin:$PATH"')
+        elif not on_path:
+            print(f"Add {launcher.parent if launcher else base / 'bin'} to your user PATH manually")
         print(json.dumps({"status": "installed", **plan}, indent=2))
         return 0
     except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
