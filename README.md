@@ -6,24 +6,31 @@ Cross-platform local decision routing for AI coding agents, powered by Laya and 
 
 For ChatGPT Desktop (Codex), Codex CLI, Claude Code, OpenCode, Pi, and other Agent Skills compatible agents. Laya Router becomes available as a local decision capability. An agent invokes it only when its own skill or tool selection policy chooses to; use the CLI for an explicit call.
 
+**Release status: v0.2.0-rc.1.** The core runtime passed real MLX, PyTorch and stdio MCP smoke tests on an Apple Silicon Mac. Agent-specific end-to-end use and non-macOS runtime inference remain pending where noted below.
+
 ## Compatibility
 
 | Platform | Backend | Device | Status |
 | --- | --- | --- | --- |
-| macOS Apple Silicon | laya-mlx | MLX GPU | Implemented; host smoke test pending |
-| macOS Intel | upstream laya | CPU / supported MPS | Implemented; host smoke test pending |
-| Windows | upstream laya | CPU / CUDA | Implemented; CI configured |
-| Linux | upstream laya | CPU / CUDA | Implemented; CI configured |
+| macOS Apple Silicon | laya-mlx | MLX GPU | Verified: real English and multilingual inference on macOS 27 arm64 |
+| macOS Apple Silicon | upstream laya | PyTorch CPU / MPS | Verified: real inference on both devices |
+| macOS Intel | upstream laya | CPU / supported MPS | Implemented; device E2E pending |
+| Windows | upstream laya | CPU / CUDA | CI verified on Python 3.11/3.12; runtime E2E pending |
+| Linux | upstream laya | CPU / CUDA | CI verified on Python 3.11/3.12; runtime E2E pending |
 
-| Agent | Skill | CLI | MCP |
-| --- | --- | --- | --- |
-| ChatGPT Desktop (Codex) | Shared Agent Skills path | Local command when shell tools are available | Codex MCP through public CLI, best effort |
-| Codex CLI | Shared Agent Skills path | Yes | Public `codex mcp add`, best effort |
-| Claude Code | Personal skill path | Yes | Manual setup only |
-| OpenCode | Shared compatible path | Yes | Manual setup only |
-| Pi | Shared Agent Skills path | Yes | Manual setup only |
+| Agent | Status | Evidence and limit |
+| --- | --- | --- |
+| ChatGPT Desktop (Codex) | Implemented; manual UI test pending | Public shared Skill and Codex MCP config paths; desktop invocation not tested |
+| Codex CLI | Verified registration; agent E2E pending | `codex mcp list` showed `laya-router`; direct MCP client called all three tools |
+| Claude Code | Implemented; E2E pending | Personal Skill link installed; isolated CLI attempt reached login requirement; MCP setup manual |
+| OpenCode | Verified discovery; agent E2E pending | `opencode debug skill` listed `laya-router`; MCP setup manual |
+| Pi | Implemented; E2E pending | Shared Skill link and CLI available; explicit run stopped for missing provider key; MCP optional |
 
-These are integration mechanisms, not guarantees that an agent calls Laya on every request. Skill discovery and CLI/MCP access depend on each host's settings and permissions. Only Codex MCP registration is automated.
+These are integration mechanisms, not guarantees that an agent calls Laya on every request. Skill discovery and CLI/MCP access depend on each host's settings and permissions. Only Codex MCP registration is automated, under the name `laya-router`. Existing MCP entries named `laya` are left untouched.
+
+The [RC cross-platform CI run](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35574162049) passed all six Ubuntu, Windows and macOS jobs. CI covers packaging, unit tests, compileall, installer dry-run and lightweight health checks; it does not run model inference.
+
+For a manual ChatGPT Desktop (Codex) check: restart the app, open Codex, confirm the Laya Router Skill is discoverable, submit a coding task that benefits from classification, and confirm the Skill or MCP reports no error. Record whether the agent actually invoked it; automatic selection is not guaranteed.
 
 ## Install
 
@@ -47,6 +54,8 @@ py -3 scripts\install.py
 
 `--agents auto` selects detected commands. `--agents all` installs all four skill integrations. `--agents codex,claude,opencode,pi` selects specific integrations. `--backend auto|mlx|torch` selects backend; `--no-mcp` skips Codex MCP; `--dry-run` makes no changes; `--force` backs up an existing skill target before replacing it. `--yes` is accepted for automation. Existing unowned integrations are skipped by default.
 
+`--backend` chooses the dependency at installation and is written to a new config. A repeated install preserves an existing `config.json`; edit its `backend` field to change runtime selection. This protects local user settings.
+
 If the installer reports a backend installation failure, inspect the result with the health check. It can still install the core CLI, which returns `status=unavailable` until the backend is available. The installer does not replace `codex`, `claude`, `opencode`, or `pi`.
 
 ## Use
@@ -60,13 +69,13 @@ laya-router backend
 laya-router version
 ```
 
-The installed CLI is in the private venv's `bin` directory on macOS/Linux or `Scripts` on Windows. Add that directory to PATH if desired, or call the executable by its full path. `python scripts/decide.py "..."` is a source-checkout helper after dependencies are installed. For long-running hot model instances, use the optional MCP adapter.
+The installer creates a user-level `laya-router` launcher when `~/.local/bin` already exists on macOS/Linux, or in its user data `bin` directory on Windows. It prints `PATH status: READY` or `ACTION REQUIRED`; it never edits shell startup files or Windows environment variables. If needed, add `~/.local/bin` to PATH yourself with `export PATH="$HOME/.local/bin:$PATH"`, or call the private venv executable by its full path. `python scripts/decide.py "..."` is a source-checkout helper after installation. A separate CLI process reloads its model; the optional MCP adapter keeps selected checkpoints hot in its long-running process.
 
 The six answers are `task_type`, `complexity` (0 trivial, 1 normal, 2 complex, 3 very complex), `needs_strong_reasoning`, `needs_tools`, `security_sensitive`, and `risk`. Both backends return the same envelope with `status`, `backend`, `runtime`, `model`, `device`, `advisory`, `answers`, `routing`, and `usage`. On failure the result contains `status=unavailable`, `advisory=true`, and `fail_open=true`; the agent continues normally.
 
 ## Scope and safety
 
-Laya is useful for classification, routing, choice, score, `noul` probability, risk signals, and complexity hints. It does not replace code generation, debugging, architecture reasoning, security audits, or final approval. Base checkpoints can be inaccurate for some zero-shot typed decisions. The host agent and user retain all permission, sandbox, and security decisions. No model answer is executed as a shell command.
+Laya is useful for classification, routing, choice, score, `noul` probability, risk signals, and complexity hints. It does not replace code generation, debugging, architecture reasoning, security audits, or final approval. Laya base checkpoints may have limited zero-shot accuracy on some typed-decision workloads. Routing confidence is not a measured probability of correctness. The host agent and user retain all permission, sandbox, and security decisions. No model answer is executed as a shell command.
 
 Inference is local after the first checkpoint download. Task text is not persisted by default. Logs avoid task text and model exception messages. MCP stdout carries only protocol data.
 
@@ -80,6 +89,8 @@ python3 scripts/uninstall.py --all
 
 Health check does not download weights; an absent agent is reported as `SKIP`. The ownership manifest limits uninstall to files and Codex MCP entries created by this installer. It does not delete agent configuration directories or the global model cache.
 
+The real checkpoint and stdio MCP checks are marked `integration` and excluded from ordinary `pytest`. After installing a backend and MCP SDK in an isolated venv, run `python -m pytest -m integration`. This can download model weights and needs the selected device. Pull-request CI runs only lightweight tests; a manual workflow dispatch can opt in to model download.
+
 ## Development
 
 ```sh
@@ -88,6 +99,6 @@ python3 -m venv .venv
 .venv/bin/python -m pytest
 ```
 
-The runtime uses upstream [Laya](https://github.com/NandhaKishorM/laya) and the [Laya-MLX port](https://github.com/mizorewww/laya-mlx). See [architecture](references/ARCHITECTURE.md), [backends](references/BACKENDS.md), and [agent integration](references/AGENTS.md).
+The runtime uses upstream [Laya](https://github.com/NandhaKishorM/laya) and the [Laya-MLX port](https://github.com/mizorewww/laya-mlx). See [architecture](references/ARCHITECTURE.md), [backends](references/BACKENDS.md), [agent integration](references/AGENTS.md), and the [RC validation report](references/RC_VALIDATION.md).
 
 Author: wangmiao · tuziling84@gmail.com · [GitHub](https://github.com/wangmiaozero). Apache-2.0. This is an independent integration.

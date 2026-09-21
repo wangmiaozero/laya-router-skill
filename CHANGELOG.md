@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0rc1
+
+- Real backend and MCP smoke validation on macOS Apple Silicon.
+- Private CLI launcher and safer install validation.
+
 ## 0.2.0
 
 - Cross-platform runtime with lazy Laya-MLX and upstream Laya/PyTorch backends.
