@@ -1,6 +1,6 @@
 import importlib.util
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import subprocess
 import sys
 
@@ -34,9 +34,9 @@ def test_uninstall_rejects_unowned_manifest(tmp_path):
 
 def test_launchers_quote_paths_with_spaces():
     install = load_script("install")
-    posix = install.launcher_content(Path("/tmp/Laya 测试/python"))
+    posix = install.launcher_content(PurePosixPath("/tmp/Laya 测试/python"), windows=False)
     assert "'/tmp/Laya 测试/python'" in posix
-    windows = install.launcher_content(Path(r"C:\Users\Test User\laya-router\python.exe"), windows=True)
+    windows = install.launcher_content(PureWindowsPath(r"C:\Users\Test User\laya-router\python.exe"), windows=True)
     assert '"C:\\Users\\Test User\\laya-router\\python.exe"' in windows
 
 
