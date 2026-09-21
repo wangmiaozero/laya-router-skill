@@ -1,5 +1,7 @@
 # laya-router-skill
 
+English | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+
 Local Laya-MLX decision routing for Codex and Pi on Apple Silicon.
 
 `laya-router-skill` packages a reusable **Agent Skill** plus a small local MCP runtime. It uses [laya-mlx](https://github.com/mizorewww/laya-mlx) for fast structured decisions such as task classification, complexity scoring, escalation hints, tool-use hints, and lightweight execution-risk signals.
@@ -41,6 +43,28 @@ The installer:
 4. best-effort registers a Codex MCP server named `laya`
 
 No global Python packages are installed.
+
+## Install with Codex
+
+Copy this into Codex:
+
+```text
+Install and set up https://github.com/wangmiaozero/laya-router-skill on this Apple Silicon Mac.
+
+Do all of the following:
+1. Require macOS arm64 and Python 3.11+. Stop if this machine does not match.
+2. Clone the repo if it is not already checked out:
+   git clone https://github.com/wangmiaozero/laya-router-skill.git
+   cd laya-router-skill
+3. Run ./scripts/install.sh
+4. Run ./scripts/healthcheck.sh
+5. If Codex MCP registration failed, register it with:
+   codex mcp add laya -- "$HOME/.local/share/laya-router/.venv/bin/python" "$HOME/.local/share/laya-router/server.py" --mcp
+6. Verify with: codex mcp list
+7. Summarize skill path, runtime path, healthcheck status, and MCP status.
+
+Do not install Python packages globally. If Laya, MLX, the model, or MCP is unavailable, fail open and report the error; do not block normal Codex work. After setup, use this skill for local task triage via the laya MCP tool laya_decide, or ./scripts/decide.sh.
+```
 
 ## Normal usage
 
@@ -106,6 +130,8 @@ This removes the runtime and the installed skill symlink, but not your repositor
 laya-router-skill/
 ├── SKILL.md
 ├── README.md
+├── README.zh-CN.md
+├── README.zh-TW.md
 ├── LICENSE
 ├── SECURITY.md
 ├── CONTRIBUTING.md
