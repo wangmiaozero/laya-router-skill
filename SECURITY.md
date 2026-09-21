@@ -1,20 +1,7 @@
 # Security Policy
 
-## Reporting
+Report security issues privately through [GitHub Security Advisories](https://github.com/wangmiaozero/laya-router-skill/security/advisories/new) or to tuziling84@gmail.com.
 
-Please report security issues privately:
+Laya Router runs as the current user. Its output is advisory and cannot authorize destructive commands, credentials access, production changes, or a final security verdict. Never convert model output into shell commands. The host agent and user retain permission and sandbox decisions.
 
-- GitHub Security Advisories: https://github.com/wangmiaozero/laya-router-skill/security/advisories/new
-- Email: tuziling84@gmail.com
-
-Do not open a public issue with exploit details.
-
-## Threat model
-
-This project installs executable Python code and can expose it to coding agents through MCP. It runs with the current user's permissions.
-
-The Laya output is advisory only. Never use it as the sole authorization mechanism for destructive commands, credentials, production changes, or security-sensitive actions.
-
-## Logging
-
-The default runtime does not intentionally persist task text. Operational errors are written under `~/.local/share/laya-router/logs/`.
+Inference is local after the first model download. `persist_task_text=false` by default. The router does not log task text or model exception messages, which might contain sensitive input. MCP stdout is reserved for protocol messages.

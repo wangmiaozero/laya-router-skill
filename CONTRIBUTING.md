@@ -1,25 +1,9 @@
 # Contributing
 
-Issues and pull requests are welcome:
-
-https://github.com/wangmiaozero/laya-router-skill/issues
+Issues and pull requests: https://github.com/wangmiaozero/laya-router-skill/issues
 
 Maintainer: wangmiao <tuziling84@gmail.com>
 
-## Principles
+Keep CLI, backend, and adapter layers separate. Preserve fail-open behavior and ownership-safe uninstall. Do not wrap agent commands or make Laya an authorization authority.
 
-- keep the skill compatible with the Agent Skills directory layout
-- avoid replacing or wrapping the official `codex` binary
-- keep runtime dependencies isolated
-- preserve fail-open behavior
-- do not turn Laya into an authorization authority
-- document behavioral changes
-
-## Local development
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install laya-mlx mcp
-python runtime/server.py "Implement a small README fix"
-```
+For development, use Python 3.11 or 3.12 in a virtual environment. `pip install -e '.[test]'` installs the CLI without a model backend; add `.[mlx]` or `.[torch]` to run real inference. `pytest` never downloads model weights.

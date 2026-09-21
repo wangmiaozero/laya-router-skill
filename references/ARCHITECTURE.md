@@ -1,24 +1,16 @@
 # Architecture
 
 ```text
-Codex / Pi
-    |
-    +-- Agent Skill discovery --> SKILL.md
-    |
-    +-- MCP / helper script --> local Python runtime
-                              |
-                              +--> laya-mlx
-                                   |
-                                   +--> MLX / Apple GPU
+AI agents (ChatGPT Desktop (Codex), Codex CLI, Claude Code, OpenCode, Pi)
+  -> Agent Skill -> laya-router CLI
+                  -> optional MCP adapter
+                  -> RouterCore -> LayaBackend
+                                 -> laya-mlx / MLX (Apple Silicon)
+                                 -> upstream laya / PyTorch (other platforms)
 ```
 
-The Agent Skill explains when Laya is useful and how to interpret its output. The runtime provides deterministic structured access to the local model. The MCP layer lets Codex call it without users writing Python.
+The CLI is the stable entry point. MCP exposes `laya_decide`, `laya_health`, and `laya_info` over stdio and shares the core. The runtime never executes model output. All errors yield `status=unavailable`, `advisory=true`, and `fail_open=true`. In `backend=auto`, Apple Silicon tries MLX then PyTorch. An explicit backend never silently changes.
 
-## Design principles
+The upstream Router handles language and checkpoint selection. Its model instances are lazy and retained in the long-running process, with at most two loaded at once. A separate CLI process has a separate lifetime; use MCP for hot repeated requests.
 
-1. **Advisory, not authoritative** — Laya suggests routing signals; the coding agent remains responsible for decisions.
-2. **Fail open** — a broken model or MCP must never block normal coding-agent work.
-3. **Private runtime** — dependencies live in `~/.local/share/laya-router/.venv`.
-4. **No shell alias** — never replace the real `codex` binary.
-5. **Shared skill path** — `~/.agents/skills` works with Codex and Pi.
-6. **Local by default** — after initial checkpoint download, inference stays local.
+The Python environment and config live in a platformdirs user data directory. Agent skill links point to a separate copied skill tree. The installer records ownership in `install-manifest.json`; uninstall consults that file before deletion.

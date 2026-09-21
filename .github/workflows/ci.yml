@@ -1,0 +1,33 @@
+name: Cross-platform CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.11', '3.12']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e ".[test]"
+      - run: python -m compileall -q runtime scripts
+      - run: python -m pytest -q
+      - run: python scripts/install.py --agents all --dry-run
+      - run: python scripts/healthcheck.py --lightweight --json
+  backend-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[torch]"
+      - run: python -m laya_router decide "Classify this small test task" --json
