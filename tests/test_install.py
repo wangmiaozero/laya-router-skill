@@ -30,3 +30,32 @@ def test_uninstall_rejects_unowned_manifest(tmp_path):
         assert False
     except RuntimeError:
         pass
+
+
+def test_launchers_quote_paths_with_spaces():
+    install = load_script("install")
+    posix = install.launcher_content(Path("/tmp/Laya 测试/python"))
+    assert "'/tmp/Laya 测试/python'" in posix
+    windows = install.launcher_content(Path(r"C:\Users\Test User\laya-router\python.exe"), windows=True)
+    assert '"C:\\Users\\Test User\\laya-router\\python.exe"' in windows
+
+
+def test_uninstall_symlink_uses_canonical_target(tmp_path, monkeypatch):
+    uninstall = load_script("uninstall")
+    base = tmp_path / "data"
+    base.mkdir()
+    source = base / "skill"
+    source.mkdir()
+    (source / "SKILL.md").write_text("test", encoding="utf-8")
+    target = tmp_path / "skills" / "laya-router"
+    target.parent.mkdir()
+    target.symlink_to(source, target_is_directory=True)
+    alias = tmp_path / "alias"
+    alias.symlink_to(base, target_is_directory=True)
+    manifest = {"owner": "laya-router-skill", "paths": [str(source)],
+                "skills": {str(target): {"mode": "symlink", "source": str(alias / "skill"), "agents": ["claude"]}},
+                "mcp": {}, "launchers": {}}
+    (base / "install-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(uninstall, "data_dir", lambda: base)
+    assert uninstall.main(["--all"]) == 0
+    assert not target.is_symlink()

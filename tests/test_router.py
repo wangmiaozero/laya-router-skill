@@ -73,9 +73,27 @@ def test_torch_failure_is_fail_open_without_task_leak():
     assert "private credential" not in result["error"]
 
 
+def test_both_backends_fail_open_on_apple_silicon():
+    class Broken:
+        def __init__(self, config):
+            pass
+        def predict(self, *_):
+            raise ImportError("missing")
+    router = RouterCore(cfg(), info("Darwin", "arm64"), {"mlx": Broken, "torch": Broken})
+    result = router.decide("task")
+    assert result["status"] == "unavailable" and result["fail_open"] is True
+    assert result["advisory"] is True
+
+
 def test_forced_backend_does_not_fallback():
     result = RouterCore(cfg(backend="mlx"), info("Linux", "x86_64")).decide("task")
     assert result["status"] == "unavailable" and "requires macOS" in result["error"]
+
+
+def test_disabled_router_reports_unavailable_for_info_and_decide():
+    router = RouterCore(cfg(enabled=False), info("Linux", "x86_64"))
+    assert router.info()["status"] == "unavailable"
+    assert router.decide("task")["fail_open"] is True
 
 
 def test_config_parsing_and_invalid_fallback(tmp_path):
