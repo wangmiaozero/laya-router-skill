@@ -41,7 +41,7 @@ Real `uninstall.py --all --dry-run` listed only owned Skill links, MCP entry, la
 
 Ordinary local `pytest`: 14 passed, 2 integration tests deselected. Explicit `pytest -m integration`: 2 passed. `compileall`, installer dry-run, lightweight health check and `git diff --check` passed. Ordinary CI has six jobs (Ubuntu, Windows, macOS; Python 3.11 and 3.12) and does not download model weights. Manual `workflow_dispatch` can opt in to a real checkpoint test; `download_model` defaults to false.
 
-The [latest GitHub Actions run](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35574162049) completed successfully: all six Ubuntu, Windows and macOS jobs passed on Python 3.11 and 3.12. An earlier run passed Ubuntu and macOS but failed both Windows jobs because a test used host `Path` for both POSIX and Windows example paths. The test now uses explicit `PurePosixPath` and `PureWindowsPath`.
+The [cited GitHub Actions run](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35574348483) completed successfully: all six Ubuntu, Windows and macOS jobs passed on Python 3.11 and 3.12. An earlier run passed Ubuntu and macOS but failed both Windows jobs because a test used host `Path` for both POSIX and Windows example paths. The test now uses explicit `PurePosixPath` and `PureWindowsPath`.
 
 ## Release assessment
 
