@@ -1,18 +1,7 @@
 interface:
-  display_name: laya router
-  short_description: Use local Laya-MLX on Apple Silicon for fast task triage, complexity
-    scoring, escalation hints, tool-use hints, and lightweight risk classification
-    before or during coding-agent work. Use when deciding how to route a task, whether
-    stronger reasoning is warranted, whether tools are likely needed, or when a cheap
-    local structured decision can avoid unnecessary frontier-model reasoning. Do not
-    use Laya as a replacement for coding, debugging, architecture reasoning, security
-    review, or final judgment.
-  icon_small: assets/icon.svg
-  icon_large: assets/icon.svg
+  display_name: "Laya Router"
+  short_description: "Fast local decision routing powered by Laya."
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
 policy:
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
   allow_implicit_invocation: true

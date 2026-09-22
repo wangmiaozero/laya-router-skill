@@ -1,174 +1,85 @@
-# laya-router-skill
+# Laya Router Skill
 
-[English](README.md) | [简体中文](README.zh-CN.md) | 繁體中文
+[English](README.md) · [简体中文](README.zh-CN.md)
 
-面向 Apple Silicon 的本機 Laya-MLX 決策路由，用於 Codex 與 Pi。
+面向 AI Coding Agent 的跨平台本機決策路由 Skill，由 Laya / Laya-MLX 驅動。
 
-`laya-router-skill` 將可重複使用的 **Agent Skill** 與小型本機 MCP runtime 打包在一起。它基於 [laya-mlx](https://github.com/mizorewww/laya-mlx)，用於快速給出結構化決策，例如任務分類、複雜度評分、升級提示、工具使用提示，以及輕量級執行風險訊號。
+支援 ChatGPT Desktop (Codex)、Codex CLI、Claude Code、OpenCode、Pi 及相容 Agent Skills 的 Agent。是否自動呼叫取決於 Agent 的 Skill／工具選擇策略；明確呼叫可使用 CLI 或已設定的 MCP 工具。
 
-它**不能**取代 GPT、Codex、Pi、程式碼審查或安全判斷。
+**版本：v0.2.0。** Apple Silicon Mac 上的真實 MLX、PyTorch 與 stdio MCP 驗證已通過；ChatGPT Desktop (Codex)、Codex CLI、Claude Code 和 OpenCode 的明確呼叫已驗證。Windows、Linux 和 Intel Mac 原生裝置上的真實推理仍待驗證。
 
-## 為什麼需要它
+Laya Router 僅提供參考訊號。Agent 可依自身 Skill／工具選擇策略呼叫它；明確呼叫的驗證結果見下表，隱式呼叫依賴 Agent，不作保證。
 
-編碼 Agent 經常把前沿模型的推理能力浪費在很小的路由問題上：
+## 相容性
 
-- 這個任務是瑣碎還是複雜？
-- 是否需要更強的推理？
-- 這主要是前端、後端、架構還是安全工作？
-- 是否很可能需要工具？
-- 請求的操作是否異常危險？
+| 平台 | 後端 | CI | 真實推理 |
+| --- | --- | --- | --- |
+| Apple Silicon Mac | laya-mlx / MLX GPU | Python 3.11/3.12 已驗證 | 已驗證 |
+| Apple Silicon Mac (Torch) | upstream Laya / PyTorch MPS + CPU | Python 3.11/3.12 已驗證 | 已驗證 |
+| Windows | upstream Laya / PyTorch CPU/CUDA | Python 3.11/3.12 已驗證 | 尚未在原生 Windows 裝置驗證 |
+| Linux | upstream Laya / PyTorch CPU/CUDA | Python 3.11/3.12 已驗證 | 尚未在原生 Linux 裝置驗證 |
+| Intel Mac | upstream Laya / PyTorch | 架構已涵蓋；無原生裝置 CI | 未驗證 |
 
-Laya 可以在 Apple Silicon 上本機回答這類有約束的結構化問題。本專案把該能力做成 Agent 可重複使用的套件。
+| 客戶端 | Skill 發現 | 明確呼叫 | 隱式呼叫 | MCP / CLI | 狀態 |
+| --- | --- | --- | --- | --- | --- |
+| ChatGPT Desktop (Codex) | 已驗證 | 三次 `laya_decide` 呼叫已驗證 | 依賴 Agent；不保證 | MCP 已驗證 | 已驗證 |
+| Codex CLI | 已驗證 | 已驗證 | 部分驗證；依賴 Agent | MCP 已驗證 | 明確呼叫已驗證 |
+| Claude Code | 已驗證 | 已驗證 | 不保證 | CLI / Skill 已驗證 | 明確呼叫已驗證 |
+| OpenCode | 已驗證 | 已驗證 | 不保證 | CLI / Skill 已驗證 | 明確呼叫已驗證 |
+| Pi | 已驗證 | 提供者額度限制完整 E2E | 不保證 | Skill 整合已驗證 | 整合已驗證；完整 E2E 待完成 |
 
-## 環境需求
+ChatGPT Desktop (Codex) 已透過 MCP 完成 A、B、C 三項明確 E2E 測試，並保留自身最終判斷。既有名為 `laya` 的 MCP 項目不會被覆蓋；新項目名為 `laya-router`。
 
-- Apple Silicon Mac（`arm64`）
-- macOS 14+
-- Python 3.11+
-- Codex 和／或 Pi
+Agent E2E 的證據和限制見 [AGENT_E2E.md](references/AGENT_E2E.md)。每次決策僅向使用者資料目錄的 `logs/events.jsonl` 附加時間、來源、工具、後端、執行時期、狀態、耗時和任務 SHA-256 雜湊；不記錄完整任務文字。
+
+[RC 跨平台 CI](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35574162049) 的 Ubuntu、Windows、macOS × Python 3.11/3.12 共六個作業全部通過。一般 CI 不執行真實模型推理。
 
 ## 安裝
 
-```bash
+建議使用 Python 3.11 或 3.12。安裝器建立獨立 venv，不在全域安裝 Python 套件。模型在首次決策時才下載。
+
+macOS／Linux：
+
+```sh
 git clone https://github.com/wangmiaozero/laya-router-skill.git
 cd laya-router-skill
-./scripts/install.sh
+python3 scripts/install.py
 ```
 
-安裝腳本會：
+Windows PowerShell：
 
-1. 建立 `~/.local/share/laya-router/.venv`
-2. 安裝 `laya-mlx` 與 MCP Python SDK
-3. 將 skill 安裝到 `~/.agents/skills/laya-router`
-4. 盡力註冊名為 `laya` 的 Codex MCP server
-
-不會安裝任何全域 Python 套件。
-
-## 用 Codex 安裝
-
-把下面這段話複製給 Codex 即可：
-
-```text
-在這台 Apple Silicon Mac 上安裝並設定 https://github.com/wangmiaozero/laya-router-skill
-
-請依序完成：
-1. 確認系統是 macOS arm64，且 Python 為 3.11+。不滿足就停止並說明原因。
-2. 如果目前目錄還沒有這個儲存庫，先複製再進入：
-   git clone https://github.com/wangmiaozero/laya-router-skill.git
-   cd laya-router-skill
-3. 執行 ./scripts/install.sh
-4. 執行 ./scripts/healthcheck.sh
-5. 如果 Codex MCP 沒有註冊成功，執行：
-   codex mcp add laya -- "$HOME/.local/share/laya-router/.venv/bin/python" "$HOME/.local/share/laya-router/server.py" --mcp
-6. 用 codex mcp list 確認已有名為 laya 的 MCP server
-7. 回報 skill 路徑、runtime 路徑、healthcheck 結果、MCP 狀態。
-
-不要安裝全域 Python 套件。如果 Laya、MLX、模型或 MCP 無法使用，按 fail-open 處理並回報錯誤，不要阻斷後續工作。安裝完成後，用本機 laya MCP 的 laya_decide 工具做任務分流；也可用 ./scripts/decide.sh。
+```powershell
+git clone https://github.com/wangmiaozero/laya-router-skill.git
+cd laya-router-skill
+py -3 scripts\install.py
 ```
 
-## 日常使用
+`--agents auto` 只選偵測到的 Agent；`--agents all` 安裝全部 Skill；`--agents codex,claude,opencode,pi` 指定 Agent。亦可使用 `--backend auto|mlx|torch`、`--no-mcp`、`--dry-run`、`--force` 與 `--yes`。預設跳過非本專案擁有的既有 Skill。
 
-正常使用 Codex：
+`--backend` 決定安裝的後端依賴，並寫入新建設定；重複安裝會保留既有 `config.json`。若要變更執行時期後端，請修改設定中的 `backend` 欄位。
 
-```bash
-codex
+## 使用
+
+```sh
+laya-router decide "重構這個模組並評估風險" --json
+laya-router health
+laya-router info
+laya-router config
+laya-router backend
+laya-router version
+python3 scripts/healthcheck.py --json
 ```
 
-或正常使用 Pi：
+安裝器會在 macOS/Linux 已有的 `~/.local/bin` 建立使用者級 launcher；Windows 使用使用者資料目錄的 `bin`。它會顯示 `PATH status: READY` 或 `ACTION REQUIRED`，不會修改 shell 設定或系統環境變數。如需自行加入 PATH，可執行 `export PATH="$HOME/.local/bin:$PATH"`。亦可使用獨立 venv 的 CLI 完整路徑呼叫。每次 CLI 呼叫都是獨立行程，會重新載入模型；可選的 MCP 長期行程可保持模型常駐。兩種後端回傳統一 JSON。失敗時回傳 `status=unavailable`、`advisory=true`、`fail_open=true`，Agent 應繼續正常工作。
 
-```bash
-pi
-```
+## 參考訊號與最終判斷
 
-Skill 可透過共用的 Agent Skills 路徑被發現。Codex 也可以呼叫已註冊的本機 `laya` MCP server。
+Laya Router 的分類可能與 Agent 的最終判斷不同。一次危險操作分析中，Laya 回傳 `risk=medium`，而 Codex 判斷為高風險，且沒有執行任何危險操作。Agent 自身的安全、權限、沙箱和審批規則始終優先。Router 不能授權命令、批准破壞性操作、繞過沙箱或使用者審批，也不能取代安全審查與 Agent 推理。
 
-## 顯式呼叫
+Laya 適合分類、路由、選擇、評分、`noul` 機率與風險提示；無法取代程式碼生成、除錯、架構推理、安全稽核或最終核准。基礎 checkpoint 在部分零樣本 typed-decision 情境下準確率有限；路由信心值不等於真實正確率。模型輸出絕不可直接當成命令執行。首次下載後推理在本機完成，預設不持久化任務全文。
 
-直接做本機決策：
+解除安裝前可執行 `python3 scripts/uninstall.py --all --dry-run`，確認後執行 `python3 scripts/uninstall.py --all`。解除安裝器只刪除 manifest 記錄的本專案檔案與 MCP 項目，不刪除 Agent 設定目錄或全域模型快取。
 
-```bash
-./scripts/decide.sh "Refactor this Vue module to React and inspect risky changes"
-```
+真實模型與 MCP 測試標記為 `integration`，一般 `pytest` 預設跳過。使用隔離 venv 安裝相應後端和 MCP SDK 後，執行 `python -m pytest -m integration`；此命令可能下載 checkpoint。一般 PR CI 不下載大型模型，手動 workflow dispatch 可明確啟用。
 
-在啟用 skill 命令時，Pi 可以用 `/skill:laya-router` 顯式載入該 skill。
-
-## 健康檢查
-
-```bash
-./scripts/healthcheck.sh
-```
-
-## 設定
-
-執行時期設定位於：
-
-```text
-~/.local/share/laya-router/config.json
-```
-
-預設模型：
-
-```text
-aac6fef/laya-multilingual-mlx
-```
-
-## 失敗開放
-
-如果 Laya、MLX、模型或 MCP 無法使用，路由器會回傳 unavailable / fail-open 結果。編碼 Agent 應照常繼續工作。
-
-## 解除安裝
-
-```bash
-./scripts/uninstall.sh
-```
-
-這會移除 runtime 與已安裝的 skill 符號連結，但不會刪除你的儲存庫檢出目錄，也不會解除安裝 Codex 本身。
-
-## 專案結構
-
-```text
-laya-router-skill/
-├── SKILL.md
-├── README.md
-├── README.zh-CN.md
-├── README.zh-TW.md
-├── LICENSE
-├── SECURITY.md
-├── CONTRIBUTING.md
-├── agents/
-│   └── openai.yaml
-├── assets/
-│   └── icon.svg
-├── runtime/
-│   └── server.py
-├── scripts/
-│   ├── install.sh
-│   ├── decide.sh
-│   ├── healthcheck.sh
-│   └── uninstall.sh
-├── references/
-│   └── ARCHITECTURE.md
-└── .github/
-    └── workflows/
-        └── shellcheck.yml
-```
-
-## 安全
-
-Agent Skills 與 MCP server 會以目前使用者權限執行程式碼。安裝前請審查原始碼。不要把路由器當作破壞性操作或安全敏感操作的唯一核准門檻。
-
-## 上游
-
-- Laya：`convaiinnovations/laya`
-- MLX 移植：`mizorewww/laya-mlx`
-
-本專案是獨立整合，與 Convai Innovations、OpenAI 或 laya-mlx 維護者沒有從屬關係。
-
-## 作者
-
-- wangmiao — tuziling84@gmail.com
-- GitHub: https://github.com/wangmiaozero
-
-## 授權條款
-
-Apache-2.0.
+詳見 [英文 README](README.md)、[架構](references/ARCHITECTURE.md)、[後端](references/BACKENDS.md) 與 [Agent 整合](references/AGENTS.md)。作者：wangmiao · tuziling84@gmail.com。授權 Apache-2.0。

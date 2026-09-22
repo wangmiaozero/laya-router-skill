@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "laya-router-skill"
+dynamic = ["version"]
+description = "Cross-platform local decision routing for AI coding agents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [{name = "wangmiao", email = "tuziling84@gmail.com"}]
+dependencies = ["platformdirs>=4"]
+
+[project.optional-dependencies]
+mlx = ["laya-mlx"]
+torch = ["laya"]
+mcp = ["mcp>=1,<2"]
+test = ["pytest>=8"]
+
+[project.scripts]
+laya-router = "laya_router.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "runtime"}
+
+[tool.setuptools.dynamic]
+version = {attr = "laya_router.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["runtime"]
+
+[tool.pytest.ini_options]
+pythonpath = ["runtime"]
+testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = ["integration: requires installed backends, MCP and optional model weights"]
