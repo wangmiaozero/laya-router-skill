@@ -2,34 +2,37 @@
 
 [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
-Cross-platform local decision routing for AI coding agents, powered by Laya and Laya-MLX.
+Universal, cross-platform local decision routing for AI coding agents, powered by Laya and Laya-MLX.
 
-For ChatGPT Desktop (Codex), Codex CLI, Claude Code, OpenCode, Pi, and other Agent Skills compatible agents. Laya Router becomes available as a local decision capability. An agent invokes it only when its own skill or tool selection policy chooses to; use the CLI for an explicit call.
+For ChatGPT Desktop (Codex), Codex CLI, Claude Code, OpenCode, Pi, and other Agent Skills compatible agents. Laya Router becomes available as a local decision capability. An agent invokes it only when its own skill or tool selection policy chooses to; use the CLI or configured MCP tool for an explicit call.
 
-**Release status: v0.2.0-rc.2.** The core runtime passed real MLX, PyTorch and stdio MCP smoke tests on an Apple Silicon Mac. Explicit Codex CLI, Claude Code and OpenCode calls were also verified. Desktop UI E2E and non-macOS runtime inference remain pending where noted below.
+**Version: v0.2.0.** Real MLX, PyTorch and stdio MCP smoke tests passed on an Apple Silicon Mac. Explicit ChatGPT Desktop (Codex), Codex CLI, Claude Code and OpenCode calls were verified. Native Windows/Linux and Intel Mac inference remain unverified.
+
+Laya Router is advisory only. Supported agents can invoke it when their skill or tool selection policy decides it is useful. Explicit invocation results are shown below; implicit invocation is agent-dependent and not guaranteed.
 
 ## Compatibility
 
 | Platform | Backend | CI | Real inference |
 | --- | --- | --- | --- |
-| macOS Apple Silicon | laya-mlx GPU; upstream laya CPU/MPS | Python 3.11/3.12 verified | Verified for both backends on macOS arm64 |
-| macOS Intel | upstream laya CPU/MPS | Pending | E2E pending |
-| Windows | upstream laya CPU/CUDA | Python 3.11/3.12 verified | E2E pending |
-| Linux | upstream laya CPU/CUDA | Python 3.11/3.12 verified | E2E pending |
+| macOS Apple Silicon | laya-mlx / MLX GPU | Python 3.11/3.12 verified | Verified |
+| macOS Apple Silicon (Torch) | upstream Laya / PyTorch MPS + CPU | Python 3.11/3.12 verified | Verified |
+| Windows | upstream Laya / PyTorch CPU/CUDA | Python 3.11/3.12 verified | Not yet verified on a native Windows device |
+| Linux | upstream Laya / PyTorch CPU/CUDA | Python 3.11/3.12 verified | Not yet verified on a native Linux device |
+| Intel macOS | upstream Laya / PyTorch | Architecture covered; no native-device CI | Not verified |
 
-| Client | Skill discovery | Explicit invocation | Implicit invocation | MCP | Status |
+| Client | Skill discovery | Explicit invocation | Implicit invocation | MCP / CLI | Status |
 | --- | --- | --- | --- | --- | --- |
-| ChatGPT Desktop (Codex) | Verified in this session | CLI helper verified | E2E pending | Registered; UI E2E pending | Implemented / Manual UI E2E Pending |
-| Codex CLI | Verified | `laya_decide` and MLX verified | Skill selected; real inference not verified | Verified with automatic approval | Verified explicit E2E |
-| Claude Code | Verified | Skill to CLI to MLX verified | Skill selected; real inference not verified | Not configured | Verified explicit E2E |
-| OpenCode | Verified | Skill to CLI to MLX verified | Skill selected; real inference not verified | Not configured | Verified explicit E2E |
-| Pi | Verified | E2E pending: provider quota | E2E pending | Not configured | E2E Pending |
+| ChatGPT Desktop (Codex) | Verified | Verified: three `laya_decide` calls | Agent-dependent; not guaranteed | MCP verified | Verified |
+| Codex CLI | Verified | Verified | Partially verified; agent-dependent | MCP verified | Verified explicit invocation |
+| Claude Code | Verified | Verified | Not guaranteed | CLI / Skill verified | Verified explicit invocation |
+| OpenCode | Verified | Verified | Not guaranteed | CLI / Skill verified | Verified explicit invocation |
+| Pi | Verified | Provider quota blocked full E2E | Not guaranteed | Skill integration verified | Integration verified; full E2E pending |
 
 These are integration mechanisms, not guarantees that an agent calls Laya on every request. Skill discovery and CLI/MCP access depend on each host's settings and permissions. Only Codex MCP registration is automated, under the name `laya-router`. Existing MCP entries named `laya` are left untouched.
 
 The [RC cross-platform CI run](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35574162049) passed all six Ubuntu, Windows and macOS jobs. CI covers packaging, unit tests, compileall, installer dry-run and lightweight health checks; it does not run model inference.
 
-For a manual ChatGPT Desktop (Codex) check: restart the app, open Codex, confirm the Laya Router Skill is discoverable, submit a coding task that benefits from classification, and confirm the Skill or MCP reports no error. Record whether the agent actually invoked it; automatic selection is not guaranteed.
+ChatGPT Desktop (Codex) completed explicit E2E tests A, B and C through the MCP tool. The agent made its own final decisions, including a high-risk assessment where the router returned `medium`.
 
 Agent E2E evidence and limitations are recorded in [AGENT_E2E.md](references/AGENT_E2E.md). Decision calls append only timestamp, source, tool, backend, runtime, status, duration and a SHA-256 task hash to the user data directory's `logs/events.jsonl`. Full task text is not logged.
 
@@ -73,6 +76,14 @@ laya-router version
 The installer creates a user-level `laya-router` launcher when `~/.local/bin` already exists on macOS/Linux, or in its user data `bin` directory on Windows. It prints `PATH status: READY` or `ACTION REQUIRED`; it never edits shell startup files or Windows environment variables. If needed, add `~/.local/bin` to PATH yourself with `export PATH="$HOME/.local/bin:$PATH"`, or call the private venv executable by its full path. `python scripts/decide.py "..."` is a source-checkout helper after installation. A separate CLI process reloads its model; the optional MCP adapter keeps selected checkpoints hot in its long-running process.
 
 The six answers are `task_type`, `complexity` (0 trivial, 1 normal, 2 complex, 3 very complex), `needs_strong_reasoning`, `needs_tools`, `security_sensitive`, and `risk`. Both backends return the same envelope with `status`, `backend`, `runtime`, `model`, `device`, `advisory`, `answers`, `routing`, and `usage`. On failure the result contains `status=unavailable`, `advisory=true`, and `fail_open=true`; the agent continues normally.
+
+The optional MCP adapter requires `mcp>=1,<2`. MCP 2.x is currently unsupported because of tested compatibility issues.
+
+## Advisory behavior
+
+Laya Router may classify a task differently from the final agent judgment. In a destructive-operation analysis, Laya returned `risk=medium` while Codex judged the task high risk and executed no dangerous operation. The agent's security, permission, sandbox and approval policies always take precedence.
+
+Laya Router does not authorize shell commands, approve destructive operations, bypass a sandbox or user approval, replace security review, or replace agent reasoning.
 
 ## Scope and safety
 

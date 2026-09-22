@@ -1,5 +1,19 @@
 # v0.2.0 Agent E2E Validation Report
 
+## Final ChatGPT Desktop (Codex) validation
+
+On 2026-09-22, ChatGPT Desktop (Codex) discovered the installed Laya Router Skill and explicitly called the `laya-router/laya_decide` MCP tool in three real desktop conversations. Each response had `status=ok`, `backend=mlx`, and `runtime=laya-mlx`. This validates explicit invocation, not automatic invocation for every task.
+
+| Test | Task | Router result | Codex judgment |
+| --- | --- | --- | --- |
+| A | Fix a typo in README.md | `task_type=documentation`; `complexity=0.9798` (about normal) | Codex would complete the small documentation task itself. |
+| B | Plan a large React + NestJS + PostgreSQL domain refactor, review auth boundaries and deployment risks | `task_type=devops`; `complexity=1.9734` (about complex); `needs_strong_reasoning=0.6993` (true); `needs_tools=0.5429` (true); `security_sensitive=0.4467` (leans false); `risk=medium` | Codex treated authentication boundaries as security-sensitive despite the router's lower signal. |
+| C | Analyze deletion of production data, sudoers changes, public PostgreSQL exposure, credential rotation and disabling access controls | `security_sensitive=0.8649` (true); `risk=medium` | Codex judged the task high risk, applied its own permission, security and approval rules, and executed none of the listed operations. |
+
+Test C demonstrates the advisory boundary: **Laya Router: medium; agent judgment: high. Agent judgment wins.** No Router output grants authority to run a command or bypass an approval.
+
+The older RC test inputs and scores below were separate CLI/MCP validation runs. Their scores need not exactly match the final Desktop inputs and results above.
+
 Date: 2026-09-22 (Asia/Shanghai). The RC under test is the immutable annotated tag `v0.2.0-rc.1`, dereferencing to `a9fe7a6df823e69841366436fa45906fba03e965`. Development began at the same commit on `feat/universal-v0.2.0`. The working tree was clean before validation.
 
 ## Standard tasks and backend evidence
@@ -20,7 +34,7 @@ An independent MCP 1.x stdio client listed `laya_decide`, `laya_health` and `lay
 
 | Client and version | Skill discovery | Explicit invocation | Implicit invocation | MCP discovery and call | Final agent behavior |
 | --- | --- | --- | --- | --- | --- |
-| ChatGPT Desktop (Codex) | Verified: Skill visible to the current desktop task | CLI helper and real MLX inference verified in this desktop task | Pending | `laya-router` registered in shared Codex config; restart and UI MCP call pending | Desktop UI E2E pending |
+| ChatGPT Desktop (Codex) | Verified: Skill visible to the desktop task | Verified: three real `laya_decide` MCP calls returned MLX results | Agent-dependent; not guaranteed | Verified: `laya-router/laya_decide` in desktop UI | Retained independent judgment, including high risk for Test C |
 | Codex CLI `0.154.0-alpha.6.2` (app bundle) | Verified: read Skill file | Verified: Test A called `laya_decide`, returned MLX `ok` | Test B selected Skill and ran CLI, but sandbox prevented model inference | Verified with `--approve-for-me`; standard `read-only` invocation was denied by approval policy | Returned its own judgment after the model result |
 | Claude Code `2.1.267` | Verified: `Skill` tool launched `laya-router` | Verified: allowlisted Python helper returned MLX `ok` for A | Selected Skill for A but did not run helper | Not configured; CLI path used | Gave its own judgment after explicit model result |
 | OpenCode `1.18.31` | Verified by `opencode debug skill` and `skill` tool | Verified: Bash helper returned MLX `ok` for A | Loaded Skill for B but did not run helper | No MCP server configured; CLI path used | Gave its own judgment after explicit model result |
@@ -44,16 +58,6 @@ macOS arm64 MLX inference was verified during this run. Earlier RC validation re
 
 Before changes, `pytest` had 14 passing tests and two opt-in integration tests deselected. After changes, the local suite has 18 passing tests and two integration tests deselected. Both opt-in real CLI and MCP integration tests pass in an isolated MCP 1.x/MLX environment. `compileall` and `git diff --check` pass. The fresh RC clone passed its isolated CLI and MCP integration checks. The [development-branch CI run](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35678424160) passed all six Ubuntu, Windows and macOS jobs with Python 3.11/3.12; [ShellCheck](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35678424158) passed.
 
-## Open items and release recommendation
+## Remaining validation limits
 
-1. Restart ChatGPT Desktop (Codex) and run A, B and C in the UI. Confirm an actual `laya_decide` call with the metadata log, not only the agent's claim.
-2. Re-test the `v0.2.0-rc.2` tag after its CI run.
-
-**Recommendation: Ready for v0.2.0-rc.2; not yet ready to merge `main` or publish final `v0.2.0`.**
-
-### Short manual desktop procedure
-
-1. Restart ChatGPT Desktop (Codex), open Codex, and open this repository.
-2. Submit Test A, Test B and Test C as written above. Test C is analysis only.
-3. Inspect tool events for `laya_decide` and check `logs/events.jsonl` in the Laya user data directory for matching `mcp / ok` entries.
-4. Record whether each invocation was explicit or implicit, its backend, result, and the agent's independent final judgment.
+Pi's full Agent E2E remains blocked by its provider quota. Native Windows/Linux and Intel Mac real inference remain unverified. These limits do not change the successful CI and macOS backend results above.

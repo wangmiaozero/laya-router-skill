@@ -4,28 +4,31 @@
 
 面向 AI Coding Agent 的跨平台本機決策路由 Skill，由 Laya / Laya-MLX 驅動。
 
-支援 ChatGPT Desktop (Codex)、Codex CLI、Claude Code、OpenCode、Pi 及相容 Agent Skills 的 Agent。是否自動呼叫取決於 Agent 的 Skill／工具選擇策略；明確呼叫請使用 CLI。
+支援 ChatGPT Desktop (Codex)、Codex CLI、Claude Code、OpenCode、Pi 及相容 Agent Skills 的 Agent。是否自動呼叫取決於 Agent 的 Skill／工具選擇策略；明確呼叫可使用 CLI 或已設定的 MCP 工具。
 
-**發佈狀態：v0.2.0-rc.2。** 核心執行時期已在 Apple Silicon Mac 完成真實 MLX、PyTorch 與 stdio MCP 驗證；Codex CLI、Claude Code 和 OpenCode 的明確呼叫也已驗證。桌面 UI E2E 與其他平台的真實推理仍待驗證。
+**版本：v0.2.0。** Apple Silicon Mac 上的真實 MLX、PyTorch 與 stdio MCP 驗證已通過；ChatGPT Desktop (Codex)、Codex CLI、Claude Code 和 OpenCode 的明確呼叫已驗證。Windows、Linux 和 Intel Mac 原生裝置上的真實推理仍待驗證。
+
+Laya Router 僅提供參考訊號。Agent 可依自身 Skill／工具選擇策略呼叫它；明確呼叫的驗證結果見下表，隱式呼叫依賴 Agent，不作保證。
 
 ## 相容性
 
 | 平台 | 後端 | CI | 真實推理 |
 | --- | --- | --- | --- |
-| Apple Silicon Mac | laya-mlx GPU；laya CPU/MPS | Python 3.11/3.12 已驗證 | macOS arm64 兩種後端已驗證 |
-| Intel Mac | laya CPU/MPS | 待驗證 | E2E 待驗證 |
-| Windows | laya CPU/CUDA | Python 3.11/3.12 已驗證 | E2E 待驗證 |
-| Linux | laya CPU/CUDA | Python 3.11/3.12 已驗證 | E2E 待驗證 |
+| Apple Silicon Mac | laya-mlx / MLX GPU | Python 3.11/3.12 已驗證 | 已驗證 |
+| Apple Silicon Mac (Torch) | upstream Laya / PyTorch MPS + CPU | Python 3.11/3.12 已驗證 | 已驗證 |
+| Windows | upstream Laya / PyTorch CPU/CUDA | Python 3.11/3.12 已驗證 | 尚未在原生 Windows 裝置驗證 |
+| Linux | upstream Laya / PyTorch CPU/CUDA | Python 3.11/3.12 已驗證 | 尚未在原生 Linux 裝置驗證 |
+| Intel Mac | upstream Laya / PyTorch | 架構已涵蓋；無原生裝置 CI | 未驗證 |
 
-| 客戶端 | Skill 發現 | 明確呼叫 | 自動呼叫 | MCP | 狀態 |
+| 客戶端 | Skill 發現 | 明確呼叫 | 隱式呼叫 | MCP / CLI | 狀態 |
 | --- | --- | --- | --- | --- | --- |
-| ChatGPT Desktop (Codex) | 本次對話已驗證 | CLI 助手已驗證 | E2E 待驗證 | 已註冊；UI E2E 待驗證 | 已實作／手動 UI E2E 待驗證 |
-| Codex CLI | 已驗證 | `laya_decide` 與 MLX 已驗證 | 已選擇 Skill；真實推理未驗證 | 自動核准模式已驗證 | 明確 E2E 已驗證 |
-| Claude Code | 已驗證 | Skill → CLI → MLX 已驗證 | 已選擇 Skill；真實推理未驗證 | 未設定 | 明確 E2E 已驗證 |
-| OpenCode | 已驗證 | Skill → CLI → MLX 已驗證 | 已選擇 Skill；真實推理未驗證 | 未設定 | 明確 E2E 已驗證 |
-| Pi | 已驗證 | 提供者額度限制，E2E 待驗證 | E2E 待驗證 | 未設定 | E2E 待驗證 |
+| ChatGPT Desktop (Codex) | 已驗證 | 三次 `laya_decide` 呼叫已驗證 | 依賴 Agent；不保證 | MCP 已驗證 | 已驗證 |
+| Codex CLI | 已驗證 | 已驗證 | 部分驗證；依賴 Agent | MCP 已驗證 | 明確呼叫已驗證 |
+| Claude Code | 已驗證 | 已驗證 | 不保證 | CLI / Skill 已驗證 | 明確呼叫已驗證 |
+| OpenCode | 已驗證 | 已驗證 | 不保證 | CLI / Skill 已驗證 | 明確呼叫已驗證 |
+| Pi | 已驗證 | 提供者額度限制完整 E2E | 不保證 | Skill 整合已驗證 | 整合已驗證；完整 E2E 待完成 |
 
-ChatGPT Desktop (Codex) 手動驗收：重新啟動應用程式，開啟 Codex，確認可找到 Laya Router Skill，送出適合分類的程式任務，檢查 Skill／MCP 沒有錯誤，並記錄是否實際呼叫。自動呼叫不保證發生。既有名為 `laya` 的 MCP 項目不會被覆蓋；新項目名為 `laya-router`。
+ChatGPT Desktop (Codex) 已透過 MCP 完成 A、B、C 三項明確 E2E 測試，並保留自身最終判斷。既有名為 `laya` 的 MCP 項目不會被覆蓋；新項目名為 `laya-router`。
 
 Agent E2E 的證據和限制見 [AGENT_E2E.md](references/AGENT_E2E.md)。每次決策僅向使用者資料目錄的 `logs/events.jsonl` 附加時間、來源、工具、後端、執行時期、狀態、耗時和任務 SHA-256 雜湊；不記錄完整任務文字。
 
@@ -68,6 +71,10 @@ python3 scripts/healthcheck.py --json
 ```
 
 安裝器會在 macOS/Linux 已有的 `~/.local/bin` 建立使用者級 launcher；Windows 使用使用者資料目錄的 `bin`。它會顯示 `PATH status: READY` 或 `ACTION REQUIRED`，不會修改 shell 設定或系統環境變數。如需自行加入 PATH，可執行 `export PATH="$HOME/.local/bin:$PATH"`。亦可使用獨立 venv 的 CLI 完整路徑呼叫。每次 CLI 呼叫都是獨立行程，會重新載入模型；可選的 MCP 長期行程可保持模型常駐。兩種後端回傳統一 JSON。失敗時回傳 `status=unavailable`、`advisory=true`、`fail_open=true`，Agent 應繼續正常工作。
+
+## 參考訊號與最終判斷
+
+Laya Router 的分類可能與 Agent 的最終判斷不同。一次危險操作分析中，Laya 回傳 `risk=medium`，而 Codex 判斷為高風險，且沒有執行任何危險操作。Agent 自身的安全、權限、沙箱和審批規則始終優先。Router 不能授權命令、批准破壞性操作、繞過沙箱或使用者審批，也不能取代安全審查與 Agent 推理。
 
 Laya 適合分類、路由、選擇、評分、`noul` 機率與風險提示；無法取代程式碼生成、除錯、架構推理、安全稽核或最終核准。基礎 checkpoint 在部分零樣本 typed-decision 情境下準確率有限；路由信心值不等於真實正確率。模型輸出絕不可直接當成命令執行。首次下載後推理在本機完成，預設不持久化任務全文。
 
