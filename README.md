@@ -6,7 +6,7 @@ Cross-platform local decision routing for AI coding agents, powered by Laya and 
 
 For ChatGPT Desktop (Codex), Codex CLI, Claude Code, OpenCode, Pi, and other Agent Skills compatible agents. Laya Router becomes available as a local decision capability. An agent invokes it only when its own skill or tool selection policy chooses to; use the CLI for an explicit call.
 
-**Release status: v0.2.0-rc.1.** The core runtime passed real MLX, PyTorch and stdio MCP smoke tests on an Apple Silicon Mac. Agent-specific end-to-end use and non-macOS runtime inference remain pending where noted below.
+**Release status: v0.2.0-rc.2.** The core runtime passed real MLX, PyTorch and stdio MCP smoke tests on an Apple Silicon Mac. Explicit Codex CLI, Claude Code and OpenCode calls were also verified. Desktop UI E2E and non-macOS runtime inference remain pending where noted below.
 
 ## Compatibility
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0rc2
+
+- Verified explicit Agent calls through Codex CLI MCP and Claude Code/OpenCode Skills.
+- Added prompt-free decision call metadata for Agent E2E evidence.
+- Preserved changed Skill copies and MCP entries during uninstall.
+- Added an Agent E2E report and detailed compatibility matrix.
+
 ## 0.2.0rc1
 
 - Real backend and MCP smoke validation on macOS Apple Silicon.

@@ -42,14 +42,14 @@ The system `codex` executable at `/usr/local/bin/codex` is a broken npm wrapper 
 
 macOS arm64 MLX inference was verified during this run. Earlier RC validation recorded upstream PyTorch CPU and MPS inference. Windows and Linux Python 3.11/3.12 CI passed for RC. No Windows, Linux or Intel Mac real inference was performed in this run. No Docker or VM was available locally.
 
-Before changes, `pytest` had 14 passing tests and two opt-in integration tests deselected. After changes, the local suite has 18 passing tests and two integration tests deselected. Both opt-in real CLI and MCP integration tests pass in an isolated MCP 1.x/MLX environment. `compileall` and `git diff --check` pass. The fresh RC clone passed its isolated CLI and MCP integration checks. New development-branch CI is pending until the branch is pushed.
+Before changes, `pytest` had 14 passing tests and two opt-in integration tests deselected. After changes, the local suite has 18 passing tests and two integration tests deselected. Both opt-in real CLI and MCP integration tests pass in an isolated MCP 1.x/MLX environment. `compileall` and `git diff --check` pass. The fresh RC clone passed its isolated CLI and MCP integration checks. The [development-branch CI run](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35678424160) passed all six Ubuntu, Windows and macOS jobs with Python 3.11/3.12; [ShellCheck](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35678424158) passed.
 
 ## Open items and release recommendation
 
 1. Restart ChatGPT Desktop (Codex) and run A, B and C in the UI. Confirm an actual `laya_decide` call with the metadata log, not only the agent's claim.
-2. Run the six cross-platform CI jobs for the development changes. Re-test a `v0.2.0-rc.2` candidate if these fixes are included.
+2. Re-test the `v0.2.0-rc.2` tag after its CI run.
 
-**Recommendation: Ready for v0.2.0-rc.2 after CI; not yet ready to merge `main` or publish final `v0.2.0`.**
+**Recommendation: Ready for v0.2.0-rc.2; not yet ready to merge `main` or publish final `v0.2.0`.**
 
 ### Short manual desktop procedure
 

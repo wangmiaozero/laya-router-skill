@@ -6,7 +6,7 @@
 
 支援 ChatGPT Desktop (Codex)、Codex CLI、Claude Code、OpenCode、Pi 及相容 Agent Skills 的 Agent。是否自動呼叫取決於 Agent 的 Skill／工具選擇策略；明確呼叫請使用 CLI。
 
-**發佈狀態：v0.2.0-rc.1。** 核心執行時期已在 Apple Silicon Mac 完成真實 MLX、PyTorch 與 stdio MCP 驗證；其他平台的真實推理和部分 Agent 端到端呼叫仍待驗證。
+**發佈狀態：v0.2.0-rc.2。** 核心執行時期已在 Apple Silicon Mac 完成真實 MLX、PyTorch 與 stdio MCP 驗證；Codex CLI、Claude Code 和 OpenCode 的明確呼叫也已驗證。桌面 UI E2E 與其他平台的真實推理仍待驗證。
 
 ## 相容性
 
