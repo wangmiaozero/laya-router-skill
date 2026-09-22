@@ -4,29 +4,30 @@
 
 面向 AI Coding Agent 的跨平台本機決策路由 Skill，由 Laya / Laya-MLX 驅動。
 
-支援 ChatGPT 桌面版（Codex）、Codex CLI、Claude Code、OpenCode、Pi 及相容 Agent Skills 的 Agent。是否自動呼叫取決於 Agent 的 Skill／工具選擇策略；明確呼叫請使用 CLI。
+支援 ChatGPT Desktop (Codex)、Codex CLI、Claude Code、OpenCode、Pi 及相容 Agent Skills 的 Agent。是否自動呼叫取決於 Agent 的 Skill／工具選擇策略；明確呼叫請使用 CLI。
 
 **發佈狀態：v0.2.0-rc.1。** 核心執行時期已在 Apple Silicon Mac 完成真實 MLX、PyTorch 與 stdio MCP 驗證；其他平台的真實推理和部分 Agent 端到端呼叫仍待驗證。
 
 ## 相容性
 
-| 平台 | 後端 | 裝置 | 狀態 |
+| 平台 | 後端 | CI | 真實推理 |
 | --- | --- | --- | --- |
-| Apple Silicon Mac | laya-mlx | MLX GPU | 已驗證：英文與多語言真實推理 |
-| Apple Silicon Mac | laya | PyTorch CPU／MPS | 已驗證：兩種裝置均完成真實推理 |
-| Intel Mac | laya | CPU／可用的 MPS | 已實作，待裝置端到端驗證 |
-| Windows | laya | CPU／CUDA | Python 3.11/3.12 CI 已通過，真實推理待驗證 |
-| Linux | laya | CPU／CUDA | Python 3.11/3.12 CI 已通過，真實推理待驗證 |
+| Apple Silicon Mac | laya-mlx GPU；laya CPU/MPS | Python 3.11/3.12 已驗證 | macOS arm64 兩種後端已驗證 |
+| Intel Mac | laya CPU/MPS | 待驗證 | E2E 待驗證 |
+| Windows | laya CPU/CUDA | Python 3.11/3.12 已驗證 | E2E 待驗證 |
+| Linux | laya CPU/CUDA | Python 3.11/3.12 已驗證 | E2E 待驗證 |
 
-| Agent | 狀態 | 證據與限制 |
-| --- | --- | --- |
-| ChatGPT 桌面版（Codex） | 已實作，待手動 UI 驗證 | 公開共用 Skill 與 Codex MCP 設定路徑 |
-| Codex CLI | 已驗證註冊，待 Agent 端到端驗證 | `codex mcp list` 可見 `laya-router`；真實客戶端呼叫三個 MCP 工具 |
-| Claude Code | 已實作，端到端待驗證 | Skill 路徑正確；隔離 CLI 尚未登入；MCP 需手動設定 |
-| OpenCode | 已驗證發現，Agent 端到端待驗證 | `opencode debug skill` 列出 `laya-router`；MCP 需手動設定 |
-| Pi | 已實作，端到端待驗證 | Skill 與 CLI 可用；隔離執行缺少模型提供者金鑰；MCP 可選 |
+| 客戶端 | Skill 發現 | 明確呼叫 | 自動呼叫 | MCP | 狀態 |
+| --- | --- | --- | --- | --- | --- |
+| ChatGPT Desktop (Codex) | 本次對話已驗證 | CLI 助手已驗證 | E2E 待驗證 | 已註冊；UI E2E 待驗證 | 已實作／手動 UI E2E 待驗證 |
+| Codex CLI | 已驗證 | `laya_decide` 與 MLX 已驗證 | 已選擇 Skill；真實推理未驗證 | 自動核准模式已驗證 | 明確 E2E 已驗證 |
+| Claude Code | 已驗證 | Skill → CLI → MLX 已驗證 | 已選擇 Skill；真實推理未驗證 | 未設定 | 明確 E2E 已驗證 |
+| OpenCode | 已驗證 | Skill → CLI → MLX 已驗證 | 已選擇 Skill；真實推理未驗證 | 未設定 | 明確 E2E 已驗證 |
+| Pi | 已驗證 | 提供者額度限制，E2E 待驗證 | E2E 待驗證 | 未設定 | E2E 待驗證 |
 
-ChatGPT 桌面版（Codex）手動驗收：重新啟動應用程式，開啟 Codex，確認可找到 Laya Router Skill，送出適合分類的程式任務，檢查 Skill／MCP 沒有錯誤，並記錄是否實際呼叫。自動呼叫不保證發生。既有名為 `laya` 的 MCP 項目不會被覆蓋；新項目名為 `laya-router`。
+ChatGPT Desktop (Codex) 手動驗收：重新啟動應用程式，開啟 Codex，確認可找到 Laya Router Skill，送出適合分類的程式任務，檢查 Skill／MCP 沒有錯誤，並記錄是否實際呼叫。自動呼叫不保證發生。既有名為 `laya` 的 MCP 項目不會被覆蓋；新項目名為 `laya-router`。
+
+Agent E2E 的證據和限制見 [AGENT_E2E.md](references/AGENT_E2E.md)。每次決策僅向使用者資料目錄的 `logs/events.jsonl` 附加時間、來源、工具、後端、執行時期、狀態、耗時和任務 SHA-256 雜湊；不記錄完整任務文字。
 
 [RC 跨平台 CI](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35574162049) 的 Ubuntu、Windows、macOS × Python 3.11/3.12 共六個作業全部通過。一般 CI 不執行真實模型推理。
 

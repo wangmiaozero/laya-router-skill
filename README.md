@@ -10,27 +10,28 @@ For ChatGPT Desktop (Codex), Codex CLI, Claude Code, OpenCode, Pi, and other Age
 
 ## Compatibility
 
-| Platform | Backend | Device | Status |
+| Platform | Backend | CI | Real inference |
 | --- | --- | --- | --- |
-| macOS Apple Silicon | laya-mlx | MLX GPU | Verified: real English and multilingual inference on macOS 27 arm64 |
-| macOS Apple Silicon | upstream laya | PyTorch CPU / MPS | Verified: real inference on both devices |
-| macOS Intel | upstream laya | CPU / supported MPS | Implemented; device E2E pending |
-| Windows | upstream laya | CPU / CUDA | CI verified on Python 3.11/3.12; runtime E2E pending |
-| Linux | upstream laya | CPU / CUDA | CI verified on Python 3.11/3.12; runtime E2E pending |
+| macOS Apple Silicon | laya-mlx GPU; upstream laya CPU/MPS | Python 3.11/3.12 verified | Verified for both backends on macOS arm64 |
+| macOS Intel | upstream laya CPU/MPS | Pending | E2E pending |
+| Windows | upstream laya CPU/CUDA | Python 3.11/3.12 verified | E2E pending |
+| Linux | upstream laya CPU/CUDA | Python 3.11/3.12 verified | E2E pending |
 
-| Agent | Status | Evidence and limit |
-| --- | --- | --- |
-| ChatGPT Desktop (Codex) | Implemented; manual UI test pending | Public shared Skill and Codex MCP config paths; desktop invocation not tested |
-| Codex CLI | Verified registration; agent E2E pending | `codex mcp list` showed `laya-router`; direct MCP client called all three tools |
-| Claude Code | Implemented; E2E pending | Personal Skill link installed; isolated CLI attempt reached login requirement; MCP setup manual |
-| OpenCode | Verified discovery; agent E2E pending | `opencode debug skill` listed `laya-router`; MCP setup manual |
-| Pi | Implemented; E2E pending | Shared Skill link and CLI available; explicit run stopped for missing provider key; MCP optional |
+| Client | Skill discovery | Explicit invocation | Implicit invocation | MCP | Status |
+| --- | --- | --- | --- | --- | --- |
+| ChatGPT Desktop (Codex) | Verified in this session | CLI helper verified | E2E pending | Registered; UI E2E pending | Implemented / Manual UI E2E Pending |
+| Codex CLI | Verified | `laya_decide` and MLX verified | Skill selected; real inference not verified | Verified with automatic approval | Verified explicit E2E |
+| Claude Code | Verified | Skill to CLI to MLX verified | Skill selected; real inference not verified | Not configured | Verified explicit E2E |
+| OpenCode | Verified | Skill to CLI to MLX verified | Skill selected; real inference not verified | Not configured | Verified explicit E2E |
+| Pi | Verified | E2E pending: provider quota | E2E pending | Not configured | E2E Pending |
 
 These are integration mechanisms, not guarantees that an agent calls Laya on every request. Skill discovery and CLI/MCP access depend on each host's settings and permissions. Only Codex MCP registration is automated, under the name `laya-router`. Existing MCP entries named `laya` are left untouched.
 
 The [RC cross-platform CI run](https://github.com/wangmiaozero/laya-router-skill/actions/runs/35574162049) passed all six Ubuntu, Windows and macOS jobs. CI covers packaging, unit tests, compileall, installer dry-run and lightweight health checks; it does not run model inference.
 
 For a manual ChatGPT Desktop (Codex) check: restart the app, open Codex, confirm the Laya Router Skill is discoverable, submit a coding task that benefits from classification, and confirm the Skill or MCP reports no error. Record whether the agent actually invoked it; automatic selection is not guaranteed.
+
+Agent E2E evidence and limitations are recorded in [AGENT_E2E.md](references/AGENT_E2E.md). Decision calls append only timestamp, source, tool, backend, runtime, status, duration and a SHA-256 task hash to the user data directory's `logs/events.jsonl`. Full task text is not logged.
 
 ## Install
 
