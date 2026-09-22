@@ -8,7 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from install import data_dir, digest
+from install import data_dir, digest, tree_digest
 
 
 def plan_uninstall(base: Path, agents: list[str] | None = None, runtime: bool = False, all_items: bool = False) -> dict:
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             if details.get("mode") == "symlink" and target.is_symlink() and target.resolve() == Path(details.get("source", "")).resolve():
                 target.unlink()
-            elif details.get("mode") == "copy" and target.is_dir() and (target / "SKILL.md").exists():
+            elif details.get("mode") == "copy" and target.is_dir() and details.get("sha256") and tree_digest(target) == details["sha256"]:
                 shutil.rmtree(target)
             else:
                 print(f"Skipped changed skill: {target}")
@@ -74,27 +74,35 @@ def main(argv: list[str] | None = None) -> int:
         for name, details in plan["mcp"]:
             if details.get("agent") == "codex" and shutil.which("codex"):
                 current = subprocess.run(["codex", "mcp", "get", name], capture_output=True, text=True)
-                if current.returncode == 0 and details.get("command", "") in current.stdout:
-                    subprocess.run(["codex", "mcp", "remove", name], check=False, capture_output=True)
-                    manifest["mcp"].pop(name, None)
-        for launcher, _ in plan.get("launchers", []):
-            if launcher.exists():
-                launcher.unlink()
-            manifest["launchers"].pop(str(launcher), None)
-            backup = manifest.get("backups", {}).pop(str(launcher), None)
-            if backup and Path(backup).exists():
-                Path(backup).rename(launcher)
-        for path in sorted(plan["paths"], key=lambda p: len(p.parts), reverse=True):
-            if str(path) not in manifest["paths"] or path.parent != base or path.name not in {".venv", "skill", "config.json"}:
-                continue
-            if path.is_dir() and not path.is_symlink():
-                shutil.rmtree(path)
-            elif path.exists() or path.is_symlink():
-                path.unlink()
-            manifest["paths"].remove(str(path))
-            backup = manifest.get("backups", {}).pop(str(path), None)
-            if backup and Path(backup).exists():
-                Path(backup).rename(path)
+                if current.returncode == 0 and details.get("sha256") and digest(current.stdout.encode("utf-8")) == details["sha256"]:
+                    removed = subprocess.run(["codex", "mcp", "remove", name], check=False, capture_output=True)
+                    if removed.returncode == 0:
+                        manifest["mcp"].pop(name, None)
+                    else:
+                        print(f"Kept MCP entry after removal failed: {name}")
+                else:
+                    print(f"Skipped changed MCP entry: {name}")
+        if (plan["paths"] or plan.get("launchers")) and (manifest["skills"] or manifest["mcp"]):
+            print("Kept runtime because changed or remaining Agent integration entries still reference it")
+        else:
+            for launcher, _ in plan.get("launchers", []):
+                if launcher.exists():
+                    launcher.unlink()
+                manifest["launchers"].pop(str(launcher), None)
+                backup = manifest.get("backups", {}).pop(str(launcher), None)
+                if backup and Path(backup).exists():
+                    Path(backup).rename(launcher)
+            for path in sorted(plan["paths"], key=lambda p: len(p.parts), reverse=True):
+                if str(path) not in manifest["paths"] or path.parent != base or path.name not in {".venv", "skill", "config.json"}:
+                    continue
+                if path.is_dir() and not path.is_symlink():
+                    shutil.rmtree(path)
+                elif path.exists() or path.is_symlink():
+                    path.unlink()
+                manifest["paths"].remove(str(path))
+                backup = manifest.get("backups", {}).pop(str(path), None)
+                if backup and Path(backup).exists():
+                    Path(backup).rename(path)
         manifest_path = base / "install-manifest.json"
         if not manifest["skills"] and not manifest["mcp"] and not manifest["paths"] and not manifest.get("launchers"):
             manifest_path.unlink()

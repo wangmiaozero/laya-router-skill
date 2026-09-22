@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from .backends.mlx import MLXBackend
@@ -103,5 +104,10 @@ def core() -> RouterCore:
     return _CORE
 
 
-def decide(task: str) -> dict[str, Any]:
-    return core().decide(task)
+def decide(task: str, *, source: str = "api") -> dict[str, Any]:
+    from .events import record_call
+
+    started = time.perf_counter()
+    result = core().decide(task)
+    record_call(task, result, source=source, tool="laya_decide", duration_ms=round((time.perf_counter() - started) * 1000))
+    return result

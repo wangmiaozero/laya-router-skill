@@ -11,7 +11,7 @@ def main() -> int:
     @server.tool()
     def laya_decide(task: str) -> dict:
         """Return advisory local task decisions; unavailable results are fail open."""
-        return decide(task)
+        return decide(task, source="mcp")
 
     @server.tool()
     def laya_health() -> dict:

@@ -30,7 +30,11 @@ def inspect() -> dict:
     codex_mcp = "SKIP"
     if shutil.which("codex"):
         try:
-            codex_mcp = "OK" if subprocess.run(["codex", "mcp", "get", "laya-router"], capture_output=True, timeout=5).returncode == 0 else "ABSENT"
+            cli = subprocess.run(["codex", "--version"], capture_output=True, timeout=5)
+            if cli.returncode != 0:
+                codex_mcp = "UNAVAILABLE"
+            else:
+                codex_mcp = "OK" if subprocess.run(["codex", "mcp", "get", "laya-router"], capture_output=True, timeout=5).returncode == 0 else "ABSENT"
         except (OSError, subprocess.TimeoutExpired):
             codex_mcp = "UNAVAILABLE"
     return {"version": __version__, "platform": info.get("platform"), "python": sys.version.split()[0],

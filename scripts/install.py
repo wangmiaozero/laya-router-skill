@@ -91,6 +91,15 @@ def digest(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def tree_digest(path: Path) -> str:
+    hasher = hashlib.sha256()
+    for item in sorted(p for p in path.rglob("*") if p.is_file()):
+        hasher.update(str(item.relative_to(path)).encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(item.read_bytes())
+    return hasher.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--agents", default="auto")
@@ -195,6 +204,8 @@ def main(argv: list[str] | None = None) -> int:
                     old = manifest["skills"][key]
                     if old["mode"] == "symlink" and (not target.is_symlink() or target.resolve() != source.resolve()):
                         raise RuntimeError(f"Owned skill path changed: {target}")
+                    if old["mode"] == "copy" and (not target.is_dir() or not old.get("sha256") or tree_digest(target) != old["sha256"]):
+                        raise RuntimeError(f"Owned skill copy changed: {target}")
                     if target.is_symlink():
                         target.unlink()
                     else:
@@ -209,7 +220,8 @@ def main(argv: list[str] | None = None) -> int:
             target.parent.mkdir(parents=True, exist_ok=True)
             mode = link_or_copy(source, target)
             owners = sorted(set(a for a in agents if skill_paths()[a] == target).union(manifest["skills"].get(key, {}).get("agents", [])))
-            manifest["skills"][key] = {"mode": mode, "source": str(source), "agents": owners}
+            manifest["skills"][key] = {"mode": mode, "source": str(source), "agents": owners,
+                                       **({"sha256": tree_digest(target)} if mode == "copy" else {})}
         if plan["mcp"]:
             name = "laya-router"
             existing = subprocess.run(["codex", "mcp", "get", name], capture_output=True, text=True)
@@ -217,7 +229,9 @@ def main(argv: list[str] | None = None) -> int:
                 command = ["codex", "mcp", "add", name, "--", str(python), "-m", "laya_router.mcp"]
                 registered = subprocess.run(command, capture_output=True, text=True)
                 if registered.returncode == 0:
-                    manifest["mcp"][name] = {"agent": "codex", "command": str(python)}
+                    current = subprocess.run(["codex", "mcp", "get", name], capture_output=True, text=True)
+                    manifest["mcp"][name] = {"agent": "codex", "command": str(python),
+                                             **({"sha256": digest(current.stdout.encode("utf-8"))} if current.returncode == 0 else {})}
                 else:
                     print("Codex MCP registration unavailable; CLI and skill remain installed", file=sys.stderr)
             elif name not in manifest["mcp"]:

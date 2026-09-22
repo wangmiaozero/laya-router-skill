@@ -23,7 +23,7 @@ def main(argv: list[str] | None = None) -> int:
         print(__version__)
         return 0
     if args.command == "decide":
-        result = decide(args.task)
+        result = decide(args.task, source="cli")
     elif args.command == "config":
         result = {"path": str(CONFIG_PATH), "config": load_config()}
     elif args.command == "backend":
